@@ -1,15 +1,16 @@
 import sys
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTextEdit, QFileDialog,
     QToolBar, QMessageBox, QStatusBar, QLabel,
     QColorDialog, QFontDialog,
     QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton
 )
-from PyQt6.QtGui import QIcon, QKeySequence, QAction, QTextDocument
-from PyQt6.QtCore import Qt
+from PySide6.QtGui import QIcon, QKeySequence, QAction, QTextDocument
+from PySide6.QtCore import Qt
 
 
 class FindReplacePanel(QWidget):
+    
     def __init__(self, text_edit: QTextEdit, main_window: QMainWindow, parent=None):
         super().__init__(parent)
         self.text_edit = text_edit
@@ -201,44 +202,67 @@ class MiniWord(QMainWindow):
         self.new_action = QAction("Nuevo", self)
         self.new_action.setShortcut(QKeySequence.StandardKey.New)
         self.new_action.triggered.connect(self.new_file)
+        # --- control de teclado para crear nuevo archivo ---
+        self.new_action.setShortcut("Ctrl+N");
+        
 
         self.open_action = QAction("Abrir", self)
         self.open_action.setShortcut(QKeySequence.StandardKey.Open)
         self.open_action.triggered.connect(self.open_file)
+        # --- control de teclado para abrir archivo ---
+        self.open_action.setShortcut("Ctrl+O");
 
         self.save_action = QAction("Guardar", self)
         self.save_action.setShortcut(QKeySequence.StandardKey.Save)
         self.save_action.triggered.connect(self.save_file)
+        # --- control de teclado para guardar archivo ---
+        self.save_action.setShortcut("Ctrl+S"); # Ctrl+S para guardar
 
         self.exit_action = QAction("Salir", self)
         self.exit_action.setShortcut(QKeySequence.StandardKey.Quit)
         self.exit_action.triggered.connect(self.close)
+        # --- control de teclado para salir ---
+        self.exit_action.setShortcut("Ctrl+Q"); # Ctrl+Q para salir
 
         # Editar
         self.undo_action = QAction("Deshacer", self)
         self.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
         self.undo_action.triggered.connect(self.text_edit.undo)
+        # --- control de teclado para deshacer ---
+        self.undo_action.setShortcut("Ctrl+Z"); # Ctrl+Z para deshacer
+        
 
         self.redo_action = QAction("Rehacer", self)
         self.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
         self.redo_action.triggered.connect(self.text_edit.redo)
+        # --- control de teclado para rehacer ---
+        self.redo_action.setShortcut("Ctrl+Y"); # Ctrl+Y para rehacer
 
         self.cut_action = QAction("Cortar", self)
         self.cut_action.setShortcut(QKeySequence.StandardKey.Cut)
         self.cut_action.triggered.connect(self.text_edit.cut)
+        # --- control de teclado para cortar ---
+        self.cut_action.setShortcut("Ctrl+X"); # Ctrl+X para cortar
 
         self.copy_action = QAction("Copiar", self)
         self.copy_action.setShortcut(QKeySequence.StandardKey.Copy)
         self.copy_action.triggered.connect(self.text_edit.copy)
+        # --- control de teclado para copiar ---
+        self.copy_action.setShortcut("Ctrl+C"); # Ctrl+C para copiar
 
         self.paste_action = QAction("Pegar", self)
         self.paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         self.paste_action.triggered.connect(self.text_edit.paste)
+        # --- control de teclado para pegar ---
+        self.paste_action.setShortcut("Ctrl+V"); # Ctrl+V para pegar
 
         # Buscar / Reemplazar (ahora activan el panel lateral)
         self.find_action = QAction("Buscar", self)
         self.find_action.setShortcut(QKeySequence.StandardKey.Find)
         self.find_action.triggered.connect(self.find_text)
+        # --- control de teclado para buscar ---
+        self.find_action.setShortcut("Ctrl+F"); # Ctrl+F para buscar
+        
 
         self.replace_action = QAction("Reemplazar", self)
         self.replace_action.setShortcut("Ctrl+H")
@@ -347,7 +371,7 @@ class MiniWord(QMainWindow):
         self.find_panel.replace_edit.selectAll()
         self.status_bar.showMessage("Panel de reemplazo activo", 2000)
 
-    # ================== Personalización ==================
+    # ================== Color de fondo ==================
     def change_background_color(self):
         color = QColorDialog.getColor(
             self.text_edit.palette().base().color(), self, "Elegir color de fondo"
@@ -370,7 +394,7 @@ class MiniWord(QMainWindow):
         words = [w for w in text.split() if w.strip()]
         self.word_count_label.setText(f"Palabras: {len(words)}")
 
-    # ================== Línea y columna (extra) ==================
+    # ================== Línea y columna  ==================
     def update_cursor_position(self):
         cursor = self.text_edit.textCursor()
         line = cursor.blockNumber() + 1
