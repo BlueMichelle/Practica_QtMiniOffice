@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 pyside6 = "*"
 pyinstaller = "*"
+speechrecognition = "*"
+pyaudio = "*"
 
 [dev-packages]
 

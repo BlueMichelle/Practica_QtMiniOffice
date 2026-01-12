@@ -5,8 +5,9 @@ from PySide6.QtWidgets import (
     QColorDialog, QFontDialog,
     QWidget, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton
 )
-from PySide6.QtGui import QIcon, QKeySequence, QAction, QTextDocument
-from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon, QKeySequence, QAction, QTextDocument, QFont
+from PySide6.QtCore import Qt, QThread, Signal
+import speech_recognition as sr
 
 
 class FindReplacePanel(QWidget):
@@ -155,6 +156,42 @@ class FindReplacePanel(QWidget):
         )
 
 
+class VoiceWorker(QThread):
+    recognized_text = Signal(str)
+    error = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.running = True
+        self.recognizer = sr.Recognizer()
+    
+    def run(self):
+        try:
+            with sr.Microphone() as source:
+                # Calibrar para ruido ambiental
+                self.recognizer.adjust_for_ambient_noise(source)
+                while self.running:
+                    try:
+                        # Escuchar con timeout para permitir salir del loop
+                        audio = self.recognizer.listen(source, timeout=1, phrase_time_limit=5)
+                        text = self.recognizer.recognize_google(audio, language="es-ES")
+                        self.recognized_text.emit(text.lower())
+                    except sr.WaitTimeoutError:
+                        continue # No se detectó audio, seguir intentando
+                    except sr.UnknownValueError:
+                        pass # No se entendió el audio
+                    except sr.RequestError as e:
+                        self.error.emit(f"Error de red/API: {e}")
+                    except Exception as e:
+                        self.error.emit(f"Error inesperado: {e}")
+        except Exception as e:
+            self.error.emit(f"Error inicializando micrófono: {e}")
+
+    def stop(self):
+        self.running = False
+        self.wait()
+
+
 class MiniWord(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -195,6 +232,10 @@ class MiniWord(QMainWindow):
         self.create_actions()
         self.create_menus()
         self.create_toolbar()
+
+        # Voice worker
+        self.voice_worker = None
+
 
     # ================== Acciones ==================
     def create_actions(self):
@@ -275,6 +316,11 @@ class MiniWord(QMainWindow):
         self.font_action = QAction("Tipo de letra", self)
         self.font_action.triggered.connect(self.change_font)
 
+        self.voice_action = QAction("Activar Voz", self)
+        self.voice_action.setCheckable(True)
+        self.voice_action.triggered.connect(self.toggle_voice_control)
+
+
     # ================== Menús ==================
     def create_menus(self):
         menu_bar = self.menuBar()
@@ -323,6 +369,8 @@ class MiniWord(QMainWindow):
         toolbar.addSeparator()
         toolbar.addAction(self.find_action)
         toolbar.addAction(self.replace_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.voice_action)
 
     # ================== Funciones Archivo ==================
     def new_file(self):
@@ -400,6 +448,44 @@ class MiniWord(QMainWindow):
         line = cursor.blockNumber() + 1
         column = cursor.columnNumber() + 1
         self.cursor_label.setText(f"Línea: {line}, Columna: {column}")
+
+    # ================== Control de Voz ==================
+    def toggle_voice_control(self, checked):
+        if checked:
+            self.status_bar.showMessage("Iniciando reconocimiento de voz...", 2000)
+            self.voice_worker = VoiceWorker(self)
+            self.voice_worker.recognized_text.connect(self.handle_voice_command)
+            self.voice_worker.error.connect(lambda e: self.status_bar.showMessage(e, 5000))
+            self.voice_worker.start()
+            self.voice_action.setText("Desactivar Voz")
+            self.voice_action.setIcon(QIcon.fromTheme("microphone-sensitivity-high")) # Icono genérico si existe
+        else:
+            if self.voice_worker:
+                self.voice_worker.stop()
+                self.voice_worker = None
+            self.voice_action.setText("Activar Voz")
+            self.status_bar.showMessage("Reconocimiento de voz detenido", 2000)
+
+    def handle_voice_command(self, text):
+        self.status_bar.showMessage(f"Voz detectada: {text}", 3000)
+        
+        # Comandos
+        if "negrita" in text:
+            fmt = self.text_edit.fontWeight()
+            new_weight = QFont.Bold if fmt != QFont.Bold else QFont.Normal
+            self.text_edit.setFontWeight(new_weight)
+        
+        elif "cursiva" in text:
+            self.text_edit.setFontItalic(not self.text_edit.fontItalic())
+            
+        elif "subrayado" in text:
+            self.text_edit.setFontUnderline(not self.text_edit.fontUnderline())
+            
+        elif "guardar archivo" in text:
+            self.save_file()
+            
+        elif "nuevo documento" in text:
+            self.new_file()
 
 
 def main():
