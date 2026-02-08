@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.spec
+build/
+dist/
+out/
+Output/
+.virtualenvs/
+Pipfile.lock
